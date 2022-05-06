@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+{% set active_page='dashboard_page' %}
+{% block content %}
+<div class="col-md-12">
+    <div class="content-section">
+        <div>
+            <h4>Dashboard <span style="float: right;">User - {{ current_user.username }}</span></h4>
+            <hr>
+        </div>
+        {% if entries.items|length > 0 %}
+            <h5 class="text-center mb-3">Entries Logged By You 
+                <span style="float: right;"><a href="{{ url_for('users.log_entry') }}" class="btn btn-primary btn-sm">Log Entry</a></span></h5>
+            
+                <table class="table table-bordered table-striped table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Covid Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries.items %}
+                        <tr>
+                            <td>{{ entry.full_name }}</td>
+                            <td>{{ entry.last_visited_location }}</td>
+                            <td>{{ entry.visited_date_time.strftime("%Y-%m-%d") }}</td>
+                            <td>{{ entry.visited_date_time.strftime("%I:%M %p") }}</td>
+                            <td>{% if entry.covid_status == 2 %}
+                                <b style="color: rgb(255, 0, 0);">Tested Positive</b>
+                                {% else %}
+                                <b style="color: rgb(162, 190, 0);">Have Symptoms</b>
+                                {% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% for page_num in entries.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                        {% if  entries.page == page_num %}
+                            <a class="btn btn-info" href="{{ url_for('users.dashboard', page=page_num) }}">{{ page_num }}</a>
+                        {% else %}
+                            <a class="btn btn-outline-info" href="{{ url_for('users.dashboard', page=page_num) }}">{{ page_num }}</a>
+                        {% endif %}
+                        {% else %}
+                        ...
+                    {% endif %}
+                {% endfor %}
+        {% else %}
+            <h5 class="text-center">Oops! You didn't log any entries so far.</h5>
+            <div class="text-center">
+                <a href="{{ url_for('users.log_entry') }}" class="btn btn-primary">Log Entry Now</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block map %}
+<div class="col-md-12 mb-2">
+    <div class="content-section">
+        <div id="map" style="width: 100%; height: 500px"></div>
+    </div>
+</div>
+{% endblock map %}
+
+{% block jscripts %}
+<!-- <script src="{{ url_for('static', filename='js/index.min.js') }}"></script> -->
+<script>
+    "use strict";
+
+const key = "AIzaSyC4-YcTHOk8oj5wY_bQ4JxF2nxNZP1iOR0";
+const script = document.createElement('script')
+script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap&libraries=visualization&v=weekly`
+script.defer = ""
+
+const script2 = document.createElement('script')
+script2.src = "https://polyfill.io/v3/polyfill.min.js?features=default"
+document.getElementsByTagName("head")[0].appendChild(script2)
+document.getElementsByTagName("head")[0].appendChild(script)
+
+function initMap() {
+
+    const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 12,
+        center: {
+            lat: 39.952599,
+            lng: -75.181780
+        },
+        mapTypeId: "terrain"
+    });
+
+    const request = new XMLHttpRequest();
+    request.open('GET', '/api/locations/user/{{ current_user.id }}');
+    request.send();
+
+    request.onload = () => {
+        let locations = JSON.parse(request.responseText)
+
+        for (const location in locations) {
+            const locationCircle = new google.maps.Circle({
+                strokeColor: locations[location].color,
+                strokeOpacity: 1,
+                strokeWeight: 2,
+                fillColor: locations[location].color,
+                fillOpacity: 0.7,
+                map,
+                center: locations[location]['center'],
+                radius: 100
+            });
+        }
+    }
+    
+}
+</script>
+{% endblock jscripts %}

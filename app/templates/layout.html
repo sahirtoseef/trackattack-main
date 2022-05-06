@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='main.css') }}">
+        <meta charset="UTF-8">
+            {% if title %}
+                <title>Track Attack - {{ title }}</title>
+            {% else %}
+                <title>Track Attack</title>
+            {% endif %}
+            {% block jscripts %}
+            {% endblock jscripts %}
+    </head>
+
+    <body>
+        <header class="site-header">
+            <nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top">
+                <div class="container">
+                    <a class="navbar-brand mr-4" href="/">
+                        <img src="{{ url_for('static', filename='icons/coronavirus.png') }}" width="32" height="32" class="d-inline-block align-top" alt=""> Track Attack</a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle"
+                            aria-controls="navbarToggle" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarToggle">
+                        <div class="navbar-nav ml-auto">
+                            <a class="nav-item nav-link {{ 'active' if active_page=='home_page' else '' }}"
+                                href="{{ url_for('main.home') }}">Home</a>
+                        
+                            {% if current_user.is_authenticated %}
+                                <a class="nav-item nav-link {{ 'active' if active_page=='dashboard_page' else '' }}"
+                                    href="{{ url_for('users.dashboard') }}">Dashboard</a>
+                                <a class="nav-item nav-link {{ 'active' if active_page=='entry_page' else '' }}"
+                                    href="{{ url_for('users.log_entry') }}">Log Entry</a>
+                                <a class="nav-item nav-link {{ 'active' if active_page=='profile_page' else '' }}"
+                                    href="{{ url_for('users.profile') }}">Update Profile</a>
+                                <a class="nav-item nav-link" href="{{ url_for('users.logout') }}">Logout</a>
+                            {% else %}
+                                <a class="nav-item nav-link {{ 'active' if active_page=='login_page' else '' }}"
+                                    href="{{ url_for('users.login') }}">Login</a>                                
+                                <a class="nav-item nav-link {{ 'active' if active_page=='register_page' else '' }}"
+                                    href="{{ url_for('users.register') }}">Register</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        <main role="main" class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    {% if active_page=='login_page' or active_page == 'register_page' %}
+                        <div class="col col-sm-12 col-md-4 col-lg-4 mx-auto">
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </div>
+                    {% endif %}
+                        
+                    </button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %} 
+            <div class="row">
+                {% block content %}
+                {% endblock %}
+                {% block map %}
+                {% endblock map %}
+            </div>
+        </main>
+        <!-- Optional JavaScript -->
+        <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+        
+    </body>
+
+</html>

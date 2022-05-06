@@ -1,0 +1,245 @@
+{% extends "layout.html" %}
+{% set active_page = 'home_page' %}
+{% block content %}
+
+<div class="col-md-12">
+    <div class="content-section">
+        {% if entries.items|length > 0 %}
+        <h5 class="text-center mb-3"><span style="float: left;">Total - {{ total_entries }}</span>Entries Logged
+            <span style="float: right;"><a href="{{ url_for('users.log_entry') }}" class="btn btn-primary btn-sm">Log
+                    Entry</a></span></h5>
+        <hr>
+        
+        <table id="tableListCovidUser" class="table table-bordered table-striped table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Covid Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries.items %}
+                <tr>
+                    <td>{{ entry.full_name }}</td>
+                    <td>{{ entry.last_visited_location }}</td>
+                    <td>{{ entry.visited_date_time.strftime("%Y-%m-%d %I:%M %p") }}</td>
+                    <td>{% if entry.covid_status == 2 %}
+                        <b style="color: rgb(255, 0, 0);">Tested Positive</b>
+                        {% else %}
+                        <b style="color: rgb(162, 190, 0);">Have Symptoms</b>
+                        {% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div id="newTableCreatedLater" style="display: none;">
+
+        </div>
+            <div id="paginationDiv">
+            {% for page_num in entries.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if  entries.page == page_num %}
+                        <a class="btn btn-info" href="{{ url_for('main.home', page=page_num) }}">{{ page_num }}</a>
+                    {% else %}
+                        <a class="btn btn-outline-info" href="{{ url_for('main.home', page=page_num) }}">{{ page_num }}</a>
+                    {% endif %}
+                    {% else %}
+                    ...
+                {% endif %}
+            {% endfor %}
+            </div>
+        {% else %}
+        <h5 class="text-center">Oops! Not enough data to show!</h5>
+        <div class="text-center">
+            <a href="{{ url_for('users.log_entry') }}" class="btn btn-primary">Log Entry Now</a>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock content %}
+
+{% block map %}
+<div class="col-md-12 mb-2">
+    <select class="form-control col-md-5 mx-auto mb-2" id="selectUser">
+        <option value="user-0">All</option>
+        {% for user in users %}
+            <option value="user-{{ user.id }}">{{ user.full_name }}</option>
+        {% endfor %}
+    </select>
+    <div class="content-section">
+        <div id="map" style="width: 100%; height: 500px"></div>
+    </div>
+</div>
+{% endblock map %}
+
+{% block jscripts %}
+<!-- <script src="{{ url_for('static', filename='js/index.min.js') }}"></script> -->
+<script>
+"use strict";
+
+const key = "AIzaSyC4-YcTHOk8oj5wY_bQ4JxF2nxNZP1iOR0";
+const script = document.createElement('script')
+script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap&libraries=visualization&v=weekly`
+script.defer = ""
+
+const script2 = document.createElement('script')
+script2.src = "https://polyfill.io/v3/polyfill.min.js?features=default"
+document.getElementsByTagName("head")[0].appendChild(script2)
+document.getElementsByTagName("head")[0].appendChild(script)
+
+function initMap() {
+
+    const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 12,
+        center: {
+            lat: 39.952599,
+            lng: -75.181780
+        },
+        mapTypeId: "terrain"
+    });
+
+    const request = new XMLHttpRequest();
+    request.open('GET', '/api/locations');
+    request.send();
+
+    const locationCircleArray = []
+
+    request.onload = () => {
+        let locations = JSON.parse(request.responseText)
+        for (const location in locations) {
+            const locationCircle = new google.maps.Circle({
+                strokeColor: locations[location].color,
+                strokeOpacity: 1,
+                strokeWeight: 2,
+                fillColor: locations[location].color,
+                fillOpacity: 0.7,
+                map,
+                center: locations[location]['center'],
+                radius: 100
+            });
+            locationCircleArray.push(locationCircle);
+        }
+    }
+
+    $("#selectUser").on('change', (e) => {
+        const selectedOptionValue =  $(e.target).val()
+        const selectedUser = parseInt(selectedOptionValue.slice(5, selectedOptionValue.length))
+        
+        const request = new XMLHttpRequest();
+        request.open('GET', `/api/locations/user/${selectedUser}`);
+        request.send();
+        
+        // remove previous circles
+        locationCircleArray.forEach(singleLocationCircle => {
+            singleLocationCircle.setMap(null);
+        })
+
+        request.onload = () => {
+            let locations = JSON.parse(request.responseText)
+
+            for (const location in locations) {
+                const locationCircle = new google.maps.Circle({
+                    strokeColor: locations[location].color,
+                    strokeOpacity: 1,
+                    strokeWeight: 2,
+                    fillColor: locations[location].color,
+                    fillOpacity: 0.7,
+                    map,
+                    center: locations[location]['center'],
+                    radius: 100
+                });
+                locationCircleArray.push(locationCircle);
+            }
+        }
+        if (selectedUser==0){
+            $("#newTableCreatedLater").hide();
+            $("#tableListCovidUser").show();
+            $("#paginationDiv").show();
+        }
+        else{
+            // remove previous table
+            $("#newTable").remove();
+
+            const xhr = new XMLHttpRequest()
+            xhr.open('GET', `/api/user/${selectedUser}`)
+            xhr.send()
+            xhr.onload = () => {
+                const entries = JSON.parse(xhr.responseText).entries
+                $("#tableListCovidUser").hide();
+                $("#paginationDiv").hide();
+                // create the table again
+                const newTable = document.createElement('table')
+                newTable.className = "table table-bordered table-striped table-sm table-hover";
+                newTable.id = "newTable";
+                
+
+                const newThead = document.createElement('thead')
+                const newTrThead = document.createElement('tr')
+
+                const thThead1 = document.createElement('th')
+                thThead1.innerText = "Name";
+                const thThead2 = document.createElement('th')
+                thThead2.innerText = "Location";
+                const thThead3 = document.createElement('th')
+                thThead3.innerText = "Date";
+                const thThead4 = document.createElement('th')
+                thThead4.innerText = "Covid Status";
+                newTrThead.appendChild(thThead1)
+                newTrThead.appendChild(thThead2)
+                newTrThead.appendChild(thThead3)
+                newTrThead.appendChild(thThead4)
+                newThead.appendChild(newTrThead)
+
+                // now create table body
+                const newTbody = document.createElement('tbody');
+                entries.forEach(entry => {
+
+                    let visitDateTime = new Date(Date.parse(entry.visited_date_time))
+                    // const visitDate = visitDateTime.getFullYear()+"-"+visitDateTime.getMonth()+"-"+visitDateTime.getDay()
+                    visitDateTime = visitDateTime.toLocaleString("en-CA", {
+                                                                                year: "numeric",
+                                                                                month: "2-digit",
+                                                                                day: "2-digit",
+                                                                                hour: "numeric",
+                                                                                minute: "2-digit",
+                                                                                hour12: true,
+                                                                                timeZone: "UTC"
+                                                                            });
+
+                    const newTrTbody = document.createElement('tr')
+                    const tdbody1 = document.createElement('td')
+                    tdbody1.innerText = entry.full_name;
+                    const tdbody2 = document.createElement('td')
+                    tdbody2.innerText = entry.last_visited_location;
+                    const tdbody3 = document.createElement('td')
+                    tdbody3.innerText = visitDateTime;
+                    const tdbody4 = document.createElement('td')
+                    tdbody4.innerHTML = entry.covid_status == 2 ? '<b style="color: rgb(255, 0, 0);">Tested Positive</b>' : '<b style="color: rgb(162, 190, 0);">Have Symptoms</b>'; 
+
+                    newTrTbody.appendChild(tdbody1)
+                    newTrTbody.appendChild(tdbody2)
+                    newTrTbody.appendChild(tdbody3)
+                    newTrTbody.appendChild(tdbody4)
+                    newTrTbody.appendChild(tdbody4)
+
+                    newTbody.appendChild(newTrTbody)
+                })
+
+                newTable.appendChild(newThead)
+                newTable.appendChild(newTbody)
+                $("#newTableCreatedLater").show();
+                document.getElementById("newTableCreatedLater").appendChild(newTable)
+
+            }
+
+
+        }
+
+    })
+    
+}
+</script>
+{% endblock jscripts %}

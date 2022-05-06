@@ -1,0 +1,154 @@
+{% extends 'layout.html' %}
+{% set active_page = "entry_page" %}
+
+{% block content %}
+<div class="col-md-12">
+    <div class="content-section">
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Log Entry</legend>
+
+                <div class="form-group">
+                    {{ form.visited_date.label(class="form-control-label") }}
+                    {% if form.visited_date.errors %}
+                    {{ form.visited_date(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.visited_date.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {{ form.visited_date(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.visited_time.label(class="form-control-label") }}
+                    {% if form.visited_time.errors %}
+                    {{ form.visited_time(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.visited_time.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {{ form.visited_time(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.covid_status.label(class="form-control-label") }}
+                    {% if form.covid_status.errors %}
+                    {{ form.covid_status(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.covid_status.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {{ form.covid_status(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.last_visited_location.label(class="form-control-label") }}
+                    {% if form.last_visited_location.errors %}
+                    {{ form.last_visited_location(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.last_visited_location.errors %}
+                        <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {{ form.last_visited_location(class="form-control form-control-lg") }}
+                    {% endif %}
+                </div>
+                {{ form.last_visited_location_lat_long() }}
+            </fieldset>
+            <div class="form-group">
+                {{ form.submit(class="btn btn-block btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block map %}
+  <!-- Modal -->
+  <div class="modal fade" id="mapModalCenter" tabindex="-1" role="dialog" aria-labelledby="mapModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="mapModalLongTitle">Select a location</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <div class="content-section">
+                <div id="map" style="width: 100%; height: 500px"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div id="location_show"></div>
+          <button type="button" class="btn btn-primary" data-dismiss="modal">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock map %}
+
+{% block jscripts %}
+
+<script>
+"use strict";
+const key = "AIzaSyC4-YcTHOk8oj5wY_bQ4JxF2nxNZP1iOR0";
+const script = document.createElement("script");
+script.src=`https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap&libraries=visualization&v=weekly`;
+script.defer="";
+const script2=document.createElement("script");
+script2.src="https://polyfill.io/v3/polyfill.min.js?features=default";
+document.getElementsByTagName("head")[0].appendChild(script2);
+document.getElementsByTagName("head")[0].appendChild(script);
+
+function initMap(){
+    new google.maps.Map(document.getElementById("map"),{
+        zoom:12,
+        center: {
+            lat:39.952599,
+            lng:-75.18178
+        }
+    })
+    .addListener("click", function(t){
+        const loadingSpinner = '<div class="spinner-border text-info" role="status"><span class="sr-only">Loading...</span></div>'
+        $("#location_show").html(loadingSpinner);
+        $("#last_visited_location_lat_long").val(t.latLng.toString())
+        const request = new XMLHttpRequest();
+        const latlng = t.latLng.toString().slice(1,-1).split(' ').join('');
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng}&key=${key}`
+        request.open("GET", url)
+        request.send()
+        request.onload = () => {
+            const responseData = JSON.parse(request.responseText);
+            const results = responseData.results
+            if (results.length > 0){
+                const address = results[0].formatted_address;
+                $("#last_visited_location").val(address);
+                $("#location_show").text(address);
+            }
+            else{
+                $("#location_show").text("Couldn't locate the address, please try again!");
+            }
+            
+        }
+
+    });
+
+    $("#last_visited_location").mousedown(function(t){
+        // alert("Please select the location from the map!")
+        $('#mapModalCenter').modal('show');
+    })
+}
+                
+</script>
+{% endblock jscripts %}
